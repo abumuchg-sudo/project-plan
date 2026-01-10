@@ -18,6 +18,17 @@ export const cases = pgTable("cases", {
   adjudicatorOutput: text("adjudicator_output"), // Legal opinion
   formatterOutput: text("formatter_output"), // Final HTML Report
   
+  // Configuration
+  architectModel: text("architect_model").notNull().default("gemini-2.5-flash"),
+  minerModel: text("miner_model").notNull().default("gemini-2.5-flash"),
+  adjudicatorModel: text("adjudicator_model").notNull().default("gemini-3-pro-preview"),
+  formatterModel: text("formatter_model").notNull().default("gemini-2.5-flash"),
+  
+  apiKey1: text("api_key_1"),
+  apiKey2: text("api_key_2"),
+  apiKey3: text("api_key_3"),
+  apiKey4: text("api_key_4"),
+  
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -29,6 +40,15 @@ export const insertCaseSchema = createInsertSchema(cases).omit({
   minerOutput: true, 
   adjudicatorOutput: true, 
   formatterOutput: true 
+}).extend({
+  architectModel: z.string().optional(),
+  minerModel: z.string().optional(),
+  adjudicatorModel: z.string().optional(),
+  formatterModel: z.string().optional(),
+  apiKey1: z.string().optional(),
+  apiKey2: z.string().optional(),
+  apiKey3: z.string().optional(),
+  apiKey4: z.string().optional(),
 });
 
 export type Case = typeof cases.$inferSelect;

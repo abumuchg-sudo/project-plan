@@ -41,13 +41,20 @@ export async function registerRoutes(
       }
 
       // Validate metadata
-      // multer puts body fields in req.body
       const metadata = insertCaseSchema.parse({
         doctorName: req.body.doctorName,
         patientId: req.body.patientId,
         mode: req.body.mode,
         originalFileName: req.file.originalname,
-        status: "pending"
+        status: "pending",
+        apiKey1: req.body.apiKey1,
+        apiKey2: req.body.apiKey2,
+        apiKey3: req.body.apiKey3,
+        apiKey4: req.body.apiKey4,
+        architectModel: req.body.architectModel,
+        minerModel: req.body.minerModel,
+        adjudicatorModel: req.body.adjudicatorModel,
+        formatterModel: req.body.formatterModel,
       });
 
       const newCase = await storage.createCase(metadata);

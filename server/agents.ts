@@ -95,14 +95,19 @@ const PROMPT_FORMATTER = `
 
 // --- Agent Logic ---
 
-async function runGemini(systemPrompt: string, userContent: string, model = "gemini-2.5-flash") {
-  const response = await ai.models.generateContent({
-    model: model,
-    contents: [
-      { role: "user", parts: [{ text: systemPrompt + "\n\n### INPUT:\n" + userContent }] }
-    ]
+async function runGemini(systemPrompt: string, userContent: string, modelName: string, apiKey?: string) {
+  // If user provided a key, use it. Otherwise use Replit AI Integrations (if configured)
+  const client = new GoogleGenAI({
+    apiKey: apiKey || process.env.AI_INTEGRATIONS_GEMINI_API_KEY || "dummy",
+    httpOptions: apiKey ? undefined : {
+      apiVersion: "",
+      baseUrl: process.env.AI_INTEGRATIONS_GEMINI_BASE_URL,
+    },
   });
-  return response.response.text();
+
+  const model = client.getGenerativeModel({ model: modelName });
+  const result = await model.generateContent(systemPrompt + "\n\n### INPUT:\n" + userContent);
+  return result.response.text();
 }
 
 export async function processCase(caseId: number, pdfText: string) {
@@ -110,26 +115,29 @@ export async function processCase(caseId: number, pdfText: string) {
     const caseItem = await storage.getCase(caseId);
     if (!caseItem) return;
 
+    const keys = [caseItem.apiKey1, caseItem.apiKey2, caseItem.apiKey3, caseItem.apiKey4].filter(Boolean) as string[];
+    const getKey = (idx: number) => keys.length > 0 ? keys[idx % keys.length] : undefined;
+
     await storage.updateCase(caseId, { status: "processing" });
 
     // 1. Architect
-    console.log(`Case ${caseId}: Running Architect...`);
-    const architectOutput = await runGemini(PROMPT_ARCHITECT, pdfText);
+    console.log(`Case ${caseId}: Running Architect with ${caseItem.architectModel}...`);
+    const architectOutput = await runGemini(PROMPT_ARCHITECT, pdfText, caseItem.architectModel, getKey(0));
     await storage.updateCase(caseId, { architectOutput });
 
     // 2. Miner
-    console.log(`Case ${caseId}: Running Miner...`);
-    const minerOutput = await runGemini(PROMPT_MINER, `Original Text (Partial):\n${pdfText.substring(0, 5000)}\n\nArchitect Output:\n${architectOutput}`);
+    console.log(`Case ${caseId}: Running Miner with ${caseItem.minerModel}...`);
+    const minerOutput = await runGemini(PROMPT_MINER, `Original Text (Partial):\n${pdfText.substring(0, 5000)}\n\nArchitect Output:\n${architectOutput}`, caseItem.minerModel, getKey(1));
     await storage.updateCase(caseId, { minerOutput });
 
     // 3. Adjudicator
-    console.log(`Case ${caseId}: Running Adjudicator...`);
-    const adjudicatorOutput = await runGemini(PROMPT_ADJUDICATOR_TEMPLATE(caseItem.mode), minerOutput, "gemini-2.5-pro"); // Use Pro for reasoning
+    console.log(`Case ${caseId}: Running Adjudicator with ${caseItem.adjudicatorModel}...`);
+    const adjudicatorOutput = await runGemini(PROMPT_ADJUDICATOR_TEMPLATE(caseItem.mode), minerOutput, caseItem.adjudicatorModel, getKey(2));
     await storage.updateCase(caseId, { adjudicatorOutput });
 
     // 4. Formatter
-    console.log(`Case ${caseId}: Running Formatter...`);
-    const formatterOutput = await runGemini(PROMPT_FORMATTER, adjudicatorOutput);
+    console.log(`Case ${caseId}: Running Formatter with ${caseItem.formatterModel}...`);
+    const formatterOutput = await runGemini(PROMPT_FORMATTER, adjudicatorOutput, caseItem.formatterModel, getKey(3));
     
     await storage.updateCase(caseId, { 
       formatterOutput,
