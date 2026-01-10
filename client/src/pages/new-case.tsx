@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AIConfigPanel, type AIConfig } from "@/components/ai-config-panel";
 
 export default function NewCasePage() {
   const [, setLocation] = useLocation();
@@ -20,6 +21,17 @@ export default function NewCasePage() {
   const [patientId, setPatientId] = useState("");
   const [doctorName, setDoctorName] = useState("");
   const [mode, setMode] = useState<"NEUTRAL" | "AGGRESSIVE">("NEUTRAL");
+  
+  const [aiConfig, setAiConfig] = useState<AIConfig>({
+    apiKey1: "",
+    apiKey2: "",
+    apiKey3: "",
+    apiKey4: "",
+    architectModel: "gemini-2.5-flash",
+    minerModel: "gemini-2.5-flash",
+    adjudicatorModel: "gemini-3-pro-preview",
+    formatterModel: "gemini-2.5-flash"
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -46,6 +58,11 @@ export default function NewCasePage() {
     formData.append("doctorName", doctorName);
     formData.append("mode", mode);
 
+    // Add AI Config
+    Object.entries(aiConfig).forEach(([key, value]) => {
+      if (value) formData.append(key, value);
+    });
+
     try {
       const result = await createCase.mutateAsync(formData);
       toast({
@@ -68,7 +85,7 @@ export default function NewCasePage() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-4xl mx-auto space-y-8"
     >
-      <div className="space-y-2">
+      <div className="space-y-2 text-right">
         <h2 className="text-3xl font-serif font-bold text-foreground">פתיחת תיק חדש</h2>
         <p className="text-muted-foreground">העלה מסמכים רפואיים לניתוח והפקת חוות דעת משפטית אוטומטית.</p>
       </div>
@@ -78,11 +95,11 @@ export default function NewCasePage() {
           {/* Main Form Area */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="border-border/50 shadow-sm">
-              <CardHeader>
+              <CardHeader className="text-right">
                 <CardTitle>פרטי התיק</CardTitle>
                 <CardDescription>הזן את פרטי הנבדק והרופא המטפל</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-6 text-right">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="patientId">מזהה תיק / ת.ז נבדק</Label>
@@ -92,7 +109,7 @@ export default function NewCasePage() {
                       value={patientId}
                       onChange={(e) => setPatientId(e.target.value)}
                       required
-                      className="bg-muted/30 focus:bg-background transition-colors"
+                      className="bg-muted/30 focus:bg-background transition-colors text-right"
                     />
                   </div>
                   <div className="space-y-2">
@@ -103,7 +120,7 @@ export default function NewCasePage() {
                       value={doctorName}
                       onChange={(e) => setDoctorName(e.target.value)}
                       required
-                      className="bg-muted/30 focus:bg-background transition-colors"
+                      className="bg-muted/30 focus:bg-background transition-colors text-right"
                     />
                   </div>
                 </div>
@@ -147,6 +164,10 @@ export default function NewCasePage() {
                       </Label>
                     </div>
                   </RadioGroup>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <AIConfigPanel config={aiConfig} onChange={setAiConfig} />
                 </div>
               </CardContent>
             </Card>
